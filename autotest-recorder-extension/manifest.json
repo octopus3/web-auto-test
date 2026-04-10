@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "AutoTest Recorder",
+  "version": "0.1.0",
+  "description": "录制网页元素点击/输入并按步骤回放自动化测试。",
+  "permissions": ["activeTab", "scripting", "storage", "tabs", "debugger", "webNavigation"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "AutoTest Recorder",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_idle"
+    }
+  ]
+}
+

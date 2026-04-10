@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AutoTest Recorder</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="hdr">
+      <div class="title">AutoTest Recorder</div>
+      <div class="sub" id="subStatus">未连接</div>
+    </header>
+
+    <section class="panel">
+      <div class="row">
+        <button id="btnStartRec" class="btn primary">开始录制</button>
+        <button id="btnStopRec" class="btn" disabled>停止录制</button>
+      </div>
+      <div class="row rowInline">
+        <label class="chk">
+          <input id="chkNet" type="checkbox" />
+          <span>记录网络请求/响应</span>
+        </label>
+        <span class="pill" id="pillNetCount">0</span>
+      </div>
+      <div class="row">
+        <button id="btnPlay" class="btn success">开始测试</button>
+        <button id="btnStopTest" class="btn danger" disabled>停止测试</button>
+        <button id="btnClear" class="btn danger">清空列表</button>
+      </div>
+      <div class="row">
+        <button id="btnReset" class="btn danger">复位</button>
+      </div>
+      <div class="row">
+        <button id="btnExport" class="btn">导出 JSON</button>
+        <button id="btnImport" class="btn">导入 JSON</button>
+        <input id="fileImport" type="file" accept="application/json" hidden />
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle">
+        步骤列表 <span class="pill" id="pillCount">0</span>
+      </div>
+      <div id="errBox" class="err" hidden></div>
+      <ol id="stepsList" class="list"></ol>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle">
+        网络日志 <span class="pill" id="pillNetCount2">0</span>
+      </div>
+      <div class="row">
+        <button id="btnNetClear" class="btn danger">清空网络</button>
+        <button id="btnNetExport" class="btn">导出网络 JSON</button>
+      </div>
+      <ol id="netList" class="list"></ol>
+    </section>
+
+    <footer class="ftr">
+      <div class="hint">提示：录制时在网页里点击/输入即可。</div>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
+
