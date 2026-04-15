@@ -5,6 +5,7 @@ const els = {
   btnStartRec: document.getElementById("btnStartRec"),
   btnStopRec: document.getElementById("btnStopRec"),
   chkNet: document.getElementById("chkNet"),
+  selEmailSuffix: document.getElementById("selEmailSuffix"),
   pillNetCount: document.getElementById("pillNetCount"),
   pillNetCount2: document.getElementById("pillNetCount2"),
   btnNetClear: document.getElementById("btnNetClear"),
@@ -17,6 +18,7 @@ const els = {
   btnExport: document.getElementById("btnExport"),
   btnImport: document.getElementById("btnImport"),
   fileImport: document.getElementById("fileImport"),
+  fileUploadPick: document.getElementById("fileUploadPick"),
   pillCount: document.getElementById("pillCount"),
   stepsList: document.getElementById("stepsList"),
   errBox: document.getElementById("errBox")
@@ -24,6 +26,17 @@ const els = {
 
 let currentSteps = [];
 let saveStepsTimer = null;
+let emailSuffix = "@qq.com";
+let pickUploadStepId = null;
+
+async function getUploadBlobs() {
+  const { uploadBlobs = {} } = await chrome.storage.local.get({ uploadBlobs: {} });
+  return uploadBlobs && typeof uploadBlobs === "object" ? uploadBlobs : {};
+}
+
+async function setUploadBlobs(uploadBlobs) {
+  await chrome.storage.local.set({ uploadBlobs });
+}
 
 function setError(msg) {
   if (!msg) {
@@ -40,6 +53,7 @@ function fmtAction(step) {
   if (step.action === "input") return `输入：${JSON.stringify(step.value ?? "")}`;
   if (step.action === "enter") return "回车(Enter)";
   if (step.action === "openTab") return `打开新页：${String(step.openUrl || "")}`;
+  if (step.action === "upload") return "上传图片";
   return String(step.action || "");
 }
 
@@ -88,10 +102,97 @@ function renderSteps(steps) {
         scheduleSaveSteps();
       });
       li.appendChild(inp);
+
+      const mockRow = document.createElement("div");
+      mockRow.className = "mockRow";
+
+      const btnPhone = document.createElement("button");
+      btnPhone.type = "button";
+      btnPhone.className = "mockBtn";
+      btnPhone.textContent = "Mock 手机号";
+      btnPhone.addEventListener("click", () => {
+        const v = mockPhone();
+        inp.value = v;
+        currentSteps[idx] = { ...currentSteps[idx], value: v };
+        scheduleSaveSteps();
+      });
+
+      const btnEmail = document.createElement("button");
+      btnEmail.type = "button";
+      btnEmail.className = "mockBtn";
+      btnEmail.textContent = "Mock 邮箱";
+      btnEmail.addEventListener("click", () => {
+        const v = mockEmail(emailSuffix);
+        inp.value = v;
+        currentSteps[idx] = { ...currentSteps[idx], value: v };
+        scheduleSaveSteps();
+      });
+
+      mockRow.appendChild(btnPhone);
+      mockRow.appendChild(btnEmail);
+      li.appendChild(mockRow);
+    }
+
+    if (s.action === "upload") {
+      const meta2 = document.createElement("div");
+      meta2.className = "meta";
+      const files = Array.isArray(s.files) ? s.files : [];
+      meta2.textContent = files.length ? `录制文件：${files.map((f) => f.name).join(", ")}` : "录制文件：未选择";
+      li.appendChild(meta2);
+
+      const row = document.createElement("div");
+      row.className = "mockRow";
+
+      const btnPick = document.createElement("button");
+      btnPick.type = "button";
+      btnPick.className = "mockBtn";
+      btnPick.textContent = "绑定图片文件…";
+      btnPick.addEventListener("click", () => {
+        if (!s.id) {
+          setError("该步骤没有 id：请先重新录制或导出导入一次。");
+          return;
+        }
+        pickUploadStepId = s.id;
+        els.fileUploadPick.value = "";
+        els.fileUploadPick.click();
+      });
+
+      const btnUnbind = document.createElement("button");
+      btnUnbind.type = "button";
+      btnUnbind.className = "mockBtn";
+      btnUnbind.textContent = "解除绑定";
+      btnUnbind.addEventListener("click", async () => {
+        if (!s.id) return;
+        const blobs = await getUploadBlobs();
+        delete blobs[s.id];
+        await setUploadBlobs(blobs);
+        setError("");
+      });
+
+      row.appendChild(btnPick);
+      row.appendChild(btnUnbind);
+      li.appendChild(row);
     }
 
     els.stepsList.appendChild(li);
   });
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function mockPhone() {
+  // 简单国内手机号：1 + 10 位随机数（避免 100... 的极端）
+  let s = "1";
+  for (let i = 0; i < 10; i++) s += String(randInt(0, 9));
+  return s;
+}
+
+function mockEmail(suffix) {
+  const base = `test${Date.now().toString(36)}${randInt(100, 999)}`;
+  const safeSuffix = suffix === "@gmail.com" ? "@gmail.com" : "@qq.com";
+  return `${base}${safeSuffix}`;
 }
 
 function escapeHtml(s) {
@@ -521,10 +622,59 @@ chrome.runtime.onMessage.addListener((msg) => {
 
 (async () => {
   const steps = await getSteps();
-  renderSteps(steps);
+  // 确保旧数据也有 id（用于 upload 绑定）
+  let changed = false;
+  const normalized = steps.map((s) => {
+    if (s && typeof s === "object" && !s.id) {
+      changed = true;
+      return { ...s, id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}` };
+    }
+    return s;
+  });
+  if (changed) await setSteps(normalized);
+  renderSteps(changed ? normalized : steps);
   const logs = await getNetworkLogs();
   renderNetLogs(logs);
   await refreshStatusUI();
   await refreshNetStatusUI();
+
+  const { mockEmailSuffix = "@qq.com" } = await chrome.storage.local.get({ mockEmailSuffix: "@qq.com" });
+  emailSuffix = mockEmailSuffix === "@gmail.com" ? "@gmail.com" : "@qq.com";
+  if (els.selEmailSuffix) els.selEmailSuffix.value = emailSuffix;
 })();
+
+if (els.selEmailSuffix) {
+  els.selEmailSuffix.addEventListener("change", async () => {
+    emailSuffix = els.selEmailSuffix.value === "@gmail.com" ? "@gmail.com" : "@qq.com";
+    await chrome.storage.local.set({ mockEmailSuffix: emailSuffix });
+  });
+}
+
+if (els.fileUploadPick) {
+  els.fileUploadPick.addEventListener("change", async () => {
+    setError("");
+    const f = els.fileUploadPick.files && els.fileUploadPick.files[0];
+    if (!f) return;
+    if (!pickUploadStepId) return;
+    try {
+      // 限制大小，避免 storage 爆炸（可按需调大）
+      const maxBytes = 2 * 1024 * 1024;
+      if (f.size > maxBytes) {
+        throw new Error(`图片过大（${f.size} bytes），当前限制 2MB。请换小一点的图片或后续我帮你改成 IndexedDB 存储。`);
+      }
+      const buf = await f.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(bin);
+      const blobs = await getUploadBlobs();
+      blobs[pickUploadStepId] = { name: f.name, type: f.type, size: f.size, dataBase64 };
+      await setUploadBlobs(blobs);
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      pickUploadStepId = null;
+    }
+  });
+}
 

@@ -24,6 +24,16 @@
         </label>
         <span class="pill" id="pillNetCount">0</span>
       </div>
+      <div class="row rowInline">
+        <label class="chk">
+          <span>Mock 邮箱后缀</span>
+          <select id="selEmailSuffix" class="sel">
+            <option value="@qq.com">@qq.com</option>
+            <option value="@gmail.com">@gmail.com</option>
+          </select>
+        </label>
+        <span class="pill">Mock</span>
+      </div>
       <div class="row">
         <button id="btnPlay" class="btn success">开始测试</button>
         <button id="btnStopTest" class="btn danger" disabled>停止测试</button>
@@ -36,6 +46,7 @@
         <button id="btnExport" class="btn">导出 JSON</button>
         <button id="btnImport" class="btn">导入 JSON</button>
         <input id="fileImport" type="file" accept="application/json" hidden />
+        <input id="fileUploadPick" type="file" accept="image/*" hidden />
       </div>
     </section>
 

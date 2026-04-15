@@ -98,6 +98,9 @@ async function saveSteps(steps) {
 }
 
 async function appendStep(step) {
+  if (!step.id) {
+    step.id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
   const steps = await loadSteps();
   steps.push(step);
   await saveSteps(steps);
@@ -282,6 +285,25 @@ async function playSteps(steps, opts) {
           if (typeof form.requestSubmit === "function") form.requestSubmit();
           else form.submit();
         }
+      } else if (step.action === "upload") {
+        const input = el instanceof HTMLInputElement ? el : null;
+        if (!input) return { ok: false, error: `上传目标不是 input：第 ${i + 1} 步` };
+        const type = (input.getAttribute("type") || "").toLowerCase();
+        if (type !== "file") return { ok: false, error: `上传目标不是 file input：第 ${i + 1} 步` };
+
+        const { uploadBlobs = {} } = await chrome.storage.local.get({ uploadBlobs: {} });
+        const blob = step.id ? uploadBlobs[step.id] : null;
+        if (!blob || !blob.dataBase64) {
+          return { ok: false, error: `未绑定上传文件：第 ${i + 1} 步。请在弹窗步骤里为该“上传”步骤选择图片。` };
+        }
+
+        const bytes = Uint8Array.from(atob(blob.dataBase64), (c) => c.charCodeAt(0));
+        const file = new File([bytes], blob.name || "upload.png", { type: blob.type || "application/octet-stream" });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
       } else {
         return { ok: false, error: `未知动作：第 ${i + 1} 步（${String(step.action)}）` };
       }
@@ -338,6 +360,23 @@ function onInputCapture(ev) {
 
 function onChangeCapture(ev) {
   if (!STATE.recording) return;
+  // file input 选择文件（常用于上传图片）
+  const ft = ev.target instanceof Element ? ev.target : null;
+  if (ft && ft instanceof HTMLInputElement) {
+    const type = (ft.getAttribute("type") || "").toLowerCase();
+    if (type === "file") {
+      const base = buildStepBase(ft);
+      if (!base.selector) return;
+      const files = Array.from(ft.files || []).map((f) => ({
+        name: f.name,
+        type: f.type,
+        size: f.size,
+        lastModified: f.lastModified
+      }));
+      appendStep({ ...base, action: "upload", files });
+      return;
+    }
+  }
   const el = getEditableFromEvent(ev);
   if (!el) return;
   recordInputFromEl(el, { force: true });

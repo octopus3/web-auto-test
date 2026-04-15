@@ -69,6 +69,16 @@ body {
   transform: translateY(1px);
 }
 
+.sel {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
 .btn {
   flex: 1;
   padding: 9px 10px;
@@ -151,6 +161,26 @@ body {
   color: var(--text);
   outline: none;
   font-size: 12px;
+}
+
+.mockRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.mockBtn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+}
+.mockBtn:hover {
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .iconBtn {
